@@ -1,6 +1,8 @@
 #include "toolHelp.h"
+#include <list>
 
 #define STRLEN 100
+#define ADDRESS_CHECK 0x0086B138
 
 // MEMORY_BASIC_INFORMATION.AllocationProtect constants
 #define PAGE_EXECUTE 0x10
@@ -26,6 +28,8 @@
 #define MEM_FREE 0x40000
 #define MEM_RESERVE 0x20000
 
+using namespace std;
+
 int main()
 {
     PROCESSENTRY32 proc;
@@ -41,6 +45,14 @@ int main()
     int memVal;
     SIZE_T bytesRead;
     char* addressToRead;
+    int valToScan;
+    std::list<char*> ls;
+    list<char*>::iterator lsIter;
+    char* addressToCheck = (char*)ADDRESS_CHECK;
+
+    // prompt the user for a value to scan
+    printf("Enter an integer to scan for: ");
+    scanf_s("%d",&valToScan);
 
     // get the process ID
     ret = getProcessHandle( "whileLoop.exe", &proc );
@@ -48,9 +60,10 @@ int main()
     // get the process handle from process ID
     hProc = OpenProcess( PROCESS_ALL_ACCESS, FALSE, proc.th32ProcessID );
 
+    // get information for a range of pages and store into mbi
     size = VirtualQueryEx( hProc, ptr, &mbi, sizeof(mbi) );
 
-    // get range of pages
+    // initial scan of the range of pages
     do
     {
         switch(mbi.AllocationProtect)
@@ -107,7 +120,7 @@ int main()
                 break;
         }
 
-        if ( mbi.State == MEM_COMMIT )
+        if( mbi.State == MEM_COMMIT )
         {
             // start loop to read all memory locations within this page
             addressToRead = (char*)mbi.BaseAddress;
@@ -119,38 +132,66 @@ int main()
                                        , sizeof( memVal )
                                        , &bytesRead );
 
-                addressToRead = addressToRead + sizeof( memVal );
-
-                if ( memVal == 1 )
+                // store the address read if it matches the value to scan
+                if( memVal == valToScan )
                 {
-                    printf( "0x%-16x: %x\n", addressToRead, memVal);
+                    ls.push_back( addressToRead );
+                    cnt++;
                 }
+
+                // increment the address to read
+                addressToRead = addressToRead + sizeof( memVal );
             }
-
-            /*printf( "-----------------------------\n" );
-            printf( "ptr                 : 0x%-16x\n", ptr );
-            printf( "Bytes returned      : %-16d\n", size );
-            printf( "BaseAddress         : 0x%-16x\n", mbi.BaseAddress );
-            printf( "AllocationBase      : 0x%-16x\n", mbi.AllocationBase );
-            printf( "AllocationProtect   : %s: %-16d\n", strAllocationProtect, mbi.AllocationProtect );
-            printf( "RegionSize          : 0x%-16x\n", mbi.RegionSize );
-            printf( "State               : %s: 0x%-16x\n", strState, mbi.State );
-            printf( "Protect             : %s: 0x%-16x\n", strAllocationProtect, mbi.Protect );
-            printf( "Type                : %s: 0x%-16x\n", strType, mbi.Type );
-            printf( "Bytes read          : %d\n", bytesRead );
-            printf( "ret:                : %d\n", ret ? 1 : 0 );
-
-            printf( "startAddress = 0x%-16x\n", mbi.BaseAddress );
-            printf( "addressToRead = 0x%-16x\n", addressToRead );
-            printf( "endAddress = 0x%-16x\n", (char*)mbi.BaseAddress + mbi.RegionSize );
-            printf( "regionSzie = 0x%-16x\n", mbi.RegionSize );*/
         }
 
         // increment the pointer
         ptr += mbi.RegionSize;
         size = VirtualQueryEx( hProc, ptr, &mbi, sizeof(mbi) );
 
+    // loop if the call to VirtualQueryEx succeeds
     } while( size == sizeof(mbi) );
+
+    printf( "Addresses returned: %d\n", cnt );
+
+    // successive scans of addresses matched at least once
+    do
+    {
+        printf( "------------------------------------------\n" );
+        // prompt the user for a value to scan again
+        printf("Enter an integer to scan for: ");
+        scanf_s("%d",&valToScan);
+
+
+        // loop through remaining addresses in the list
+        cnt = 0;
+        lsIter = ls.begin();
+        do
+        {
+            // read the value at the addresses stored in the list
+            ret = ReadProcessMemory( hProc
+                                   , *lsIter
+                                   , &memVal
+                                   , sizeof( memVal )
+                                   , &bytesRead );
+
+            if( memVal == valToScan )
+            {
+                // value matches the value to scan for
+                cnt++;
+                lsIter++;
+            }
+            else
+            {
+                // remove the element since value does not match
+                lsIter = ls.erase( lsIter );
+            }
+        } while( lsIter != ls.end() );
+
+        // print results and pause
+        printf( "Addresses returned: %d\n", ls.size() );
+        getchar();
+
+    } while( ls.size() > 1 );
 
     ret = CloseHandle( hProc );
 
