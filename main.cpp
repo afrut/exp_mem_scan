@@ -54,72 +54,18 @@ int main()
     printf("Enter an integer to scan for: ");
     scanf_s("%d",&valToScan);
 
-    // get the process ID
-    ret = getProcessHandle( "whileLoop.exe", &proc );
+    // get handle to process
+    ret = getProcessHandle( "targetProcess.exe", &proc );
 
-    // get the process handle from process ID
+    // open the process to scan for its memory
     hProc = OpenProcess( PROCESS_ALL_ACCESS, FALSE, proc.th32ProcessID );
 
-    // get information for a range of pages and store into mbi
+    // get information for a range of pages and store into structure mbi
     size = VirtualQueryEx( hProc, ptr, &mbi, sizeof(mbi) );
 
     // initial scan of the range of pages
     do
     {
-        switch(mbi.AllocationProtect)
-        {
-            case PAGE_EXECUTE: strcpy_s( strAllocationProtect, STRLEN, "PAGE_EXECUTE" );
-                break;
-            case PAGE_EXECUTE_READ: strcpy_s( strAllocationProtect, STRLEN, "PAGE_EXECUTE_READ" );
-                break;
-            case PAGE_EXECUTE_READWRITE: strcpy_s( strAllocationProtect, STRLEN, "PAGE_EXECUTE_READWRITE" );
-                break;
-            case PAGE_EXECUTE_WRITECOPY: strcpy_s( strAllocationProtect, STRLEN, "PAGE_EXECUTE_WRITECOPY" );
-                break;
-            case PAGE_NOACCESS: strcpy_s( strAllocationProtect, STRLEN, "PAGE_NOACCESS" );
-                break;
-            case PAGE_READONLY: strcpy_s( strAllocationProtect, STRLEN, "PAGE_READONLY" );
-                break;
-            case PAGE_READWRITE: strcpy_s( strAllocationProtect, STRLEN, "PAGE_READWRITE" );
-                break;
-            case PAGE_WRITECOPY: strcpy_s( strAllocationProtect, STRLEN, "PAGE_WRITECOPY" );
-                break;
-            case PAGE_TARGETS_INVALID: strcpy_s( strAllocationProtect, STRLEN, "PAGE_TARGETS_INVALID/PAGE_TARGETS_NO_UPDATE" );
-                break;
-            case PAGE_GUARD: strcpy_s( strAllocationProtect, STRLEN, "PAGE_GUARD" );
-                break;
-            case PAGE_NOCACHE: strcpy_s( strAllocationProtect, STRLEN, "PAGE_NOCACHE" );
-                break;
-            case PAGE_WRITECOMBINE: strcpy_s( strAllocationProtect, STRLEN, "PAGE_WRITECOMBINE" );
-                break;
-            default: strcpy_s( strAllocationProtect, STRLEN, "DEFAULT" );
-                break;
-        }
-
-        switch( mbi.State )
-        {
-            case MEM_COMMIT: strcpy_s( strState, "MEM_COMMIT" );
-                break;
-            case MEM_FREE: strcpy_s( strState, "MEM_FREE" );
-                break;
-            case MEM_RESERVE: strcpy_s( strState, "MEM_RESERVE" );
-                break;
-            default: strcpy_s( strState, "DEFAULT" );
-                break;
-        }
-
-        switch( mbi.Type )
-        {
-            case MEM_IMAGE: strcpy_s( strType, "MEM_IMAGE" );
-                break;
-            case MEM_MAPPED: strcpy_s( strType, "MEM_MAPPED" );
-                break;
-            case MEM_PRIVATE: strcpy_s( strType, "MEM_PRIVATE" );
-                break;
-            default: strcpy_s( strType, "DEFAULT" );
-                break;
-        }
-
         if( mbi.State == MEM_COMMIT )
         {
             // start loop to read all memory locations within this page
@@ -177,6 +123,7 @@ int main()
             if( memVal == valToScan )
             {
                 // value matches the value to scan for
+				printf( "%p\n", *lsIter );
                 cnt++;
                 lsIter++;
             }
