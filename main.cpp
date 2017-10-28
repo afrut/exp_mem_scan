@@ -30,6 +30,11 @@
 
 using namespace std;
 
+// TODO: separate the initial scan of pages
+// TODO: create mode: recursive
+// TODO: create mode: has value changed
+// TODO: create mode: has value not changed
+
 int main()
 {
     PROCESSENTRY32 proc;
@@ -42,13 +47,15 @@ int main()
     char strAllocationProtect[STRLEN];
     char strState[STRLEN];
     char strType[STRLEN];
-    int memVal;
     SIZE_T bytesRead;
     char* addressToRead;
     int valToScan;
     std::list<char*> ls;
     list<char*>::iterator lsIter;
     char* addressToCheck = (char*)ADDRESS_CHECK;
+    int intVal;
+	float fltVal;
+	double dblVal;
 
     // prompt the user for a value to scan
     printf("Enter an integer to scan for: ");
@@ -74,19 +81,20 @@ int main()
             {
                 ret = ReadProcessMemory( hProc
                                        , addressToRead
-                                       , &memVal
-                                       , sizeof( memVal )
+                                       , &intVal
+                                       , sizeof( intVal )
                                        , &bytesRead );
 
                 // store the address read if it matches the value to scan
-                if( memVal == valToScan )
+                if( intVal == valToScan )
                 {
                     ls.push_back( addressToRead );
                     cnt++;
                 }
 
                 // increment the address to read
-                addressToRead = addressToRead + sizeof( memVal );
+                // addressToRead = addressToRead + sizeof( intVal );
+                addressToRead = addressToRead + 1;
             }
         }
 
@@ -116,11 +124,11 @@ int main()
             // read the value at the addresses stored in the list
             ret = ReadProcessMemory( hProc
                                    , *lsIter
-                                   , &memVal
-                                   , sizeof( memVal )
+                                   , &intVal
+                                   , sizeof( intVal )
                                    , &bytesRead );
 
-            if( memVal == valToScan )
+            if( intVal == valToScan )
             {
                 // value matches the value to scan for
 				printf( "%p\n", *lsIter );
