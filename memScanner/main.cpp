@@ -21,7 +21,7 @@ int main()
     scanf_s( "%d", &valToScan );
     
     // create scanner object
-    CScanner scanner = CScanner( "Diablo III64.exe", valToScan );
+    CScanner scanner = CScanner( "targetProcess.exe", valToScan );
 
     // start recursive searching
     scanner.recursiveSearch();
